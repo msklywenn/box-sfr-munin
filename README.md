@@ -24,6 +24,8 @@ Make symbolic links in /etc/munin/plugins with the following names to the script
 - box_uptime: uptime of ONT and router
 - box_clients: number of machines connected to each local port (Wifi and Ethernet)
 
+![Screenshot](/screenshot.png)
+
 Then add a node in `/etc/munin/munin.conf` with the configured hostname.
 
 ### Example
