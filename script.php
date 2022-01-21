@@ -77,33 +77,38 @@ function uptime($state, $fiber) {
 
 // with http://${ip}/state/lan/extra
 // and  http://${ip}/state/lan/wifi
-function speed($lan, $wifi) {
-    $data = $lan->xpath('//pre');
-    $lan1 = parseKeyValues($data[0][0]);
-    $lan2 = parseKeyValues($data[1][0]);
-    $lan3 = parseKeyValues($data[2][0]);
-    $lan4 = parseKeyValues($data[3][0]);
-    $fiber = parseKeyValues($data[4][0]);
+function speed($lan, $wifi, $wantFiber) {
+    if ($wantFiber) {
+	$data = $lan->xpath('//pre');
+	$fiber = parseKeyValues($data[4][0]);
+	return
+	     "fiberdown.value ".$fiber["rx_good_bytes"]."\n"
+	    ."fiberup.value "  .$fiber["tx_good_bytes"];
+    } else {
+	$data = $lan->xpath('//pre');
+	$lan1 = parseKeyValues($data[0][0]);
+	$lan2 = parseKeyValues($data[1][0]);
+	$lan3 = parseKeyValues($data[2][0]);
+	$lan4 = parseKeyValues($data[3][0]);
 
-    $data = $wifi->xpath('//pre');
-    $wifi24GHz = parseKeyValues($data[0][0]);
-    $wifi5GHz = parseKeyValues($data[1][0]);
+	$data = $wifi->xpath('//pre');
+	$wifi24GHz = parseKeyValues($data[0][0]);
+	$wifi5GHz = parseKeyValues($data[1][0]);
 
-    return 
-         "lan1down.value ".$lan1["rx_good_bytes"]."\n"
-        ."lan1up.value "  .$lan1["tx_good_bytes"]."\n"
-        ."lan2down.value ".$lan2["rx_good_bytes"]."\n"
-        ."lan2up.value "  .$lan2["tx_good_bytes"]."\n"
-        ."lan3down.value ".$lan3["rx_good_bytes"]."\n"
-        ."lan3up.value "  .$lan3["tx_good_bytes"]."\n"
-        ."lan4down.value ".$lan4["rx_good_bytes"]."\n"
-        ."lan4up.value "  .$lan4["tx_good_bytes"]."\n"
-        ."fiberdown.value ".$fiber["rx_good_bytes"]."\n"
-        ."fiberup.value "  .$fiber["tx_good_bytes"]."\n"
-        ."wifi5down.value ".$wifi5GHz["rxbyte"]."\n"
-        ."wifi5up.value ".$wifi5GHz["txbyte"]."\n"
-        ."wifi24down.value ".$wifi24GHz["rxbyte"]."\n"
-        ."wifi24up.value ".$wifi24GHz["txbyte"];
+	return 
+	     "lan1down.value ".$lan1["rx_good_bytes"]."\n"
+	    ."lan1up.value "  .$lan1["tx_good_bytes"]."\n"
+	    ."lan2down.value ".$lan2["rx_good_bytes"]."\n"
+	    ."lan2up.value "  .$lan2["tx_good_bytes"]."\n"
+	    ."lan3down.value ".$lan3["rx_good_bytes"]."\n"
+	    ."lan3up.value "  .$lan3["tx_good_bytes"]."\n"
+	    ."lan4down.value ".$lan4["rx_good_bytes"]."\n"
+	    ."lan4up.value "  .$lan4["tx_good_bytes"]."\n"
+	    ."wifi5down.value ".$wifi5GHz["rxbyte"]."\n"
+	    ."wifi5up.value ".$wifi5GHz["txbyte"]."\n"
+	    ."wifi24down.value ".$wifi24GHz["rxbyte"]."\n"
+	    ."wifi24up.value ".$wifi24GHz["txbyte"];
+    }
 }
 
 // with http://${ip}/network
@@ -177,10 +182,11 @@ function graph($graph) {
         println(clients($network));
         break;
 
-    case "box_speed":
+    case "box_local_speed":
+    case "box_internet_speed":
         $lan = fetch($ch, "http://${ip}/state/lan/extra");
         $wifi = fetch($ch, "http://${ip}/state/wifi");
-        println(speed($lan, $wifi));
+        println(speed($lan, $wifi, $graph == "box_internet_speed"));
         break;
 
     case "box_intensity":
@@ -225,29 +231,48 @@ function config($graph) {
             println("$port.label ".$prettify[$port]);
         }
         break;
-    case "box_speed":
+    case "box_local_speed":
+    case "box_internet_speed":
         println("graph_order fiber lan1 lan2 lan3 lan4");
-        println("graph_title Traffic");
         println("graph_args --base 1000");
         println("graph_vlabel bits in (-) / out (+) per \${graph_period}");
         println("graph_category network");
         println("update_rate 60");
-        foreach (array("fiber","wifi24","wifi5","lan1","lan2","lan3","lan4") as $port) {
-            $label = $prettify[$port];
-            println("${port}down.label $label received");
-            println("${port}down.type DERIVE");
-            println("${port}down.graph no");
-            println("${port}down.cdef ${port}down,8,*");
-            println("${port}down.min 0");
-            println("${port}down.max 1000000000");
-            println("${port}up.label $label");
-            println("${port}up.type DERIVE");
-            println("${port}up.negative ${port}down");
-            println("${port}up.cdef ${port}up,8,*");
-            println("${port}up.min 0");
-            println("${port}up.max 1000000000");
-            println("${port}up.info Traffic of $label port. Max speed is 1000 Mb/s");
-        }
+	if ($graph == "box_internet_speed") {
+	    println("graph_title External Traffic");
+	    $label = $prettify["fiber"];
+	    println("fiberdown.label $label received");
+	    println("fiberdown.type DERIVE");
+	    println("fiberdown.graph no");
+	    println("fiberdown.cdef fiberdown,8,*");
+	    println("fiberdown.min 0");
+	    println("fiberdown.max 1000000000");
+	    println("fiberup.label $label");
+	    println("fiberup.type DERIVE");
+	    println("fiberup.negative fiberdown");
+	    println("fiberup.cdef fiberup,8,*");
+	    println("fiberup.min 0");
+	    println("fiberup.max 1000000000");
+	    println("fiberup.info Traffic of $label port. Max speed is 1000 Mb/s");
+	} else {
+	    println("graph_title Local Traffic");
+	    foreach (array("wifi24","wifi5","lan1","lan2","lan3","lan4") as $port) {
+		$label = $prettify[$port];
+		println("${port}down.label $label received");
+		println("${port}down.type DERIVE");
+		println("${port}down.graph no");
+		println("${port}down.cdef ${port}down,8,*");
+		println("${port}down.min 0");
+		println("${port}down.max 1000000000");
+		println("${port}up.label $label");
+		println("${port}up.type DERIVE");
+		println("${port}up.negative ${port}down");
+		println("${port}up.cdef ${port}up,8,*");
+		println("${port}up.min 0");
+		println("${port}up.max 1000000000");
+		println("${port}up.info Traffic of $label port. Max speed is 1000 Mb/s");
+	    }
+	}
         break;
     case "box_intensity":
         println("graph_title Optical Signal Intensity");
