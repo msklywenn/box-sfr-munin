@@ -198,6 +198,22 @@ function graph($graph) {
     curl_close($ch);
 }
 
+function printSpeedConfig($port, $label) {
+    println("${port}down.label $label received");
+    println("${port}down.type DERIVE");
+    println("${port}down.graph no");
+    println("${port}down.cdef ${port}down,8,*");
+    println("${port}down.min 0");
+    println("${port}down.max 1000000000");
+    println("${port}up.label $label");
+    println("${port}up.type DERIVE");
+    println("${port}up.negative ${port}down");
+    println("${port}up.cdef ${port}up,8,*");
+    println("${port}up.min 0");
+    println("${port}up.max 1000000000");
+    println("${port}up.info Traffic of $label port. Max speed is 1000 Mb/s");
+}
+
 function config($graph) {
     $hostname = $_SERVER["hostname"];
 
@@ -240,37 +256,11 @@ function config($graph) {
         println("update_rate 60");
 	if ($graph == "box_internet_speed") {
 	    println("graph_title External Traffic");
-	    $label = $prettify["fiber"];
-	    println("fiberdown.label $label received");
-	    println("fiberdown.type DERIVE");
-	    println("fiberdown.graph no");
-	    println("fiberdown.cdef fiberdown,8,*");
-	    println("fiberdown.min 0");
-	    println("fiberdown.max 1000000000");
-	    println("fiberup.label $label");
-	    println("fiberup.type DERIVE");
-	    println("fiberup.negative fiberdown");
-	    println("fiberup.cdef fiberup,8,*");
-	    println("fiberup.min 0");
-	    println("fiberup.max 1000000000");
-	    println("fiberup.info Traffic of $label port. Max speed is 1000 Mb/s");
+	    printSpeedConfig("fiber", $prettify["fiber"]);
 	} else {
 	    println("graph_title Local Traffic");
 	    foreach (array("wifi24","wifi5","lan1","lan2","lan3","lan4") as $port) {
-		$label = $prettify[$port];
-		println("${port}down.label $label received");
-		println("${port}down.type DERIVE");
-		println("${port}down.graph no");
-		println("${port}down.cdef ${port}down,8,*");
-		println("${port}down.min 0");
-		println("${port}down.max 1000000000");
-		println("${port}up.label $label");
-		println("${port}up.type DERIVE");
-		println("${port}up.negative ${port}down");
-		println("${port}up.cdef ${port}up,8,*");
-		println("${port}up.min 0");
-		println("${port}up.max 1000000000");
-		println("${port}up.info Traffic of $label port. Max speed is 1000 Mb/s");
+		printSpeedConfig($port, $prettify[$port]);
 	    }
 	}
         break;
