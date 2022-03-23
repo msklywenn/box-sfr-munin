@@ -48,7 +48,8 @@ function parseDate($date) {
     $days = explode(" ", $date[0])[0];
     $hours = (float)explode(" ", trim($date[1]))[0];
     $minutes = (float)explode(" ", trim($date[2]))[0];
-    return $days.".".(int)(($hours * 60.0 + $minutes) / 1440.0 * 100.0);
+    $percent = (int)(($hours * 60.0 + $minutes) / 1440.0 * 100.0);
+    return $days.".".str_pad($percent, 2, "0", STR_PAD_LEFT);
 }
 
 function parseKeyValues($data) {
